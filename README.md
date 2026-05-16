@@ -1,37 +1,417 @@
-# Figma Review Bot
+# ReviewFlow
 
-A Node.js bot that listens for Figma comment webhooks, parses issue numbers and statuses from comments, and posts formatted review updates to Slack.
+Automate Figma review comments directly into Slack using webhooks, Railway, Node.js, and Slack APIs.
 
-## Environment Variables
+ReviewFlow listens to Figma comment events in real time and posts structured design review updates into Slack channels.
 
-Create a `.env` file with the following:
+---
 
-| Variable | Description |
-|----------|-------------|
-| `SLACK_BOT_TOKEN` | Slack Bot OAuth token (`xoxb-...`). Get it from [Slack API](https://api.slack.com/apps) → Your App → OAuth & Permissions. |
-| `SLACK_CHANNEL_ID` | The Slack channel ID to post messages to. Right-click a channel → View channel details → copy the ID. |
-| `FIGMA_WEBHOOK_SECRET` | A passcode you define when registering your Figma webhook. Used to verify incoming requests. |
+# What It Does
 
-## Deploy to Railway
+When someone comments in Figma using a structured format like:
 
-1. Push this project to a GitHub repository.
-2. Go to [Railway](https://railway.app) and create a new project.
-3. Select **Deploy from GitHub repo** and connect your repository.
-4. In the Railway dashboard, go to **Variables** and add the three environment variables above.
-5. Railway will detect the `Procfile` and start the server automatically.
-6. Copy your Railway deployment URL (e.g. `https://your-app.up.railway.app`).
+```txt id="r1"
+#17 Dashboard alignment fixes - completed
+```
 
-## Register the Figma Webhook
+ReviewFlow automatically:
 
-Once deployed, register your webhook endpoint with Figma by making a POST request:
+1. Receives the Figma webhook
+2. Parses issue number + status
+3. Formats the review event
+4. Sends a Slack message to your channel
 
-```bash
-curl -X POST https://api.figma.com/v2/webhooks \
-  -H "Authorization: Bearer YOUR_FIGMA_PERSONAL_ACCESS_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "event_type": "FILE_COMMENT",
-    "team_id": "YOUR_TEAM_ID",
-    "endpoint": "https://your-app.up.railway.app/figma-webhook",
-    "passcode": "your-figma-webhook-secret"
-  }'
+---
+
+# Architecture
+
+```txt id="r2"
+Figma Comment
+↓
+Figma Webhook
+↓
+Railway Node.js Server
+↓
+Parser
+↓
+Slack Bot API
+↓
+Slack Channel
+```
+
+---
+
+# Features
+
+- Real-time Figma comment tracking
+- Slack notifications
+- Issue/status parsing
+- Railway deployment ready
+- Lightweight Node.js Express backend
+- Open-source and customizable
+- Works with file-level Figma webhooks
+- Supports structured design review workflows
+
+---
+
+# Tech Stack
+
+- Node.js
+- Express.js
+- Railway
+- Slack Web API
+- Figma Webhooks API
+
+---
+
+# Folder Structure
+
+```txt id="r3"
+figma-review-bot/
+├── index.js
+├── parser.js
+├── slack.js
+├── package.json
+├── .env
+├── README.md
+```
+
+---
+
+# Setup Guide
+
+# 1. Clone Repository
+
+```bash id="r4"
+git clone https://github.com/navajyoth-puthalath13/ReviewFlow.git
+cd ReviewFlow
+```
+
+---
+
+# 2. Install Dependencies
+
+```bash id="r5"
+npm install
+```
+
+---
+
+# 3. Create Environment Variables
+
+Create `.env`
+
+```env id="r6"
+SLACK_BOT_TOKEN=xoxb-your-token
+SLACK_CHANNEL_ID=CXXXXXXXX
+FIGMA_WEBHOOK_SECRET=mySuperSecret123
+```
+
+---
+
+# Slack Setup
+
+# 1. Create Slack App
+
+Open:
+
+[Slack Apps Dashboard](https://api.slack.com/apps?utm_source=chatgpt.com)
+
+Create app:
+```txt id="r7"
+Figma Review Bot
+```
+
+---
+
+# 2. Add OAuth Scope
+
+Go to:
+```txt id="r8"
+OAuth & Permissions
+```
+
+Add Bot Token Scope:
+
+```txt id="r9"
+chat:write
+```
+
+---
+
+# 3. Install to Workspace
+
+Click:
+```txt id="r10"
+Install to Workspace
+```
+
+Copy generated:
+
+```txt id="r11"
+xoxb-...
+```
+
+token into `.env`
+
+---
+
+# 4. Invite Bot to Channel
+
+Inside Slack:
+
+```txt id="r12"
+/invite @Figma Review Bot
+```
+
+---
+
+# Railway Deployment
+
+# 1. Push to GitHub
+
+```bash id="r13"
+git add .
+git commit -m "Initial deploy"
+git push
+```
+
+---
+
+# 2. Create Railway Project
+
+Open:
+
+[Railway](https://railway.app?utm_source=chatgpt.com)
+
+Deploy GitHub repo.
+
+---
+
+# 3. Add Variables
+
+Inside Railway → Variables:
+
+```env id="r14"
+SLACK_BOT_TOKEN=
+SLACK_CHANNEL_ID=
+FIGMA_WEBHOOK_SECRET=
+```
+
+---
+
+# 4. Get Public URL
+
+Railway generates:
+
+```txt id="r15"
+https://your-app.up.railway.app
+```
+
+Webhook endpoint becomes:
+
+```txt id="r16"
+https://your-app.up.railway.app/figma-webhook
+```
+
+---
+
+# Figma Webhook Setup
+
+# IMPORTANT
+
+There are TWO webhook types:
+
+| Type | Requirement |
+|---|---|
+| Team Webhook | Team admin/owner access |
+| File Webhook | File access only |
+
+Most indie users should use:
+
+```txt id="r17"
+FILE webhook
+```
+
+because team-level webhooks often fail with permission errors.
+
+---
+
+# Generate Figma Token
+
+Open:
+
+[Figma Settings](https://www.figma.com/settings?utm_source=chatgpt.com)
+
+Generate Personal Access Token.
+
+Required scopes:
+- `webhooks:write`
+- `files:read`
+
+---
+
+# File-Level Webhook Registration
+
+Example:
+
+```bash id="r18"
+curl -X POST "https://api.figma.com/v2/webhooks" \
+-H "X-Figma-Token: YOUR_TOKEN" \
+-H "Content-Type: application/json" \
+-d '{
+  "event_type":"FILE_COMMENT",
+  "context":"file",
+  "context_id":"YOUR_FILE_ID",
+  "endpoint":"https://your-app.up.railway.app/figma-webhook",
+  "passcode":"mySuperSecret123"
+}'
+```
+
+---
+
+# Getting File ID
+
+From:
+
+```txt id="r19"
+https://www.figma.com/design/uijd59BeYkDzOj5jDThJpw/test
+```
+
+File ID is:
+
+```txt id="r20"
+uijd59BeYkDzOj5jDThJpw
+```
+
+---
+
+# Comment Format
+
+Supported format:
+
+```txt id="r21"
+#17 Dashboard alignment fixes - completed
+```
+
+Supported statuses:
+- completed
+- in review
+- in progress
+- needs changes
+
+---
+
+# Common Problems
+
+# 1. Slack invalid_auth
+
+Cause:
+- wrong bot token
+- app not installed
+- missing `chat:write`
+
+Fix:
+- reinstall Slack app
+- update Railway variables
+
+---
+
+# 2. Figma Permission Error
+
+Error:
+
+```txt id="r22"
+You don't have permission to create a webhook for this team
+```
+
+Cause:
+- using team webhook without admin access
+
+Fix:
+- use file-level webhook instead
+
+---
+
+# 3. Railway Not Updating
+
+Cause:
+- old deployment still running
+
+Fix:
+- redeploy latest commit manually
+
+---
+
+# 4. Webhook Receives But Slack Doesn't Send
+
+Usually:
+- parser issue
+- wrong payload structure
+- stale deployment
+
+Check Railway logs carefully.
+
+---
+
+# Debugging Tips
+
+Add logs inside:
+
+```txt id="r23"
+index.js
+parser.js
+slack.js
+```
+
+Useful logs:
+
+```js id="r24"
+console.log(JSON.stringify(req.body, null, 2));
+```
+
+---
+
+# Open Source Notes
+
+This project was built as an experimental open-source workflow tool for design review automation between Figma and Slack.
+
+Main engineering challenges were:
+- webhook permissions
+- deployment consistency
+- Slack OAuth setup
+- Figma API scopes
+- webhook runtime debugging
+
+The actual parser logic is small compared to the infrastructure setup complexity.
+
+---
+
+# Future Improvements
+
+- GitHub issue sync
+- Multiple Slack channels
+- Figma thread support
+- Rich Slack cards
+- AI review summaries
+- Database persistence
+- Retry queue
+- User authentication
+
+---
+
+# License
+
+MIT
+
+---
+
+# Author
+
+Created by Navajyoth Putalath
+
+- GitHub: https://github.com/navajyoth-puthalath13
+- X (Twitter): https://x.com/yourusername
+- LinkedIn: https://linkedin.com/in/yourusername
+
+Built with ❤️
