@@ -428,5 +428,6 @@ Created by Navajyoth Putalath
 - GitHub: https://github.com/navajyoth-puthalath13
 - X (Twitter): https://x.com/putalath
 - LinkedIn: https://www.linkedin.com/in/navajyothp
+  
 
 Built with ❤️
