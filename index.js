@@ -23,7 +23,9 @@ app.post('/figma-webhook', async (req, res) => {
     const { comment, file_name, file_key, triggered_by } = req.body;
 
     const commenterName = triggered_by?.handle || 'Unknown';
-    const commentText = comment?.text || comment?.message || '';
+    const commentText = Array.isArray(comment)
+      ? comment[0]?.text || ''
+      : comment?.text || comment?.message || '';
     const fileUrl = file_key
       ? `https://www.figma.com/file/${file_key}`
       : 'https://www.figma.com';
