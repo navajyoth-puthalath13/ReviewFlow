@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const crypto = require('crypto');
 const { parseComment } = require('./parser');
 const { postReviewMessage } = require('./slack');
 
@@ -13,30 +14,53 @@ app.get('/', (req, res) => {
 });
 
 app.post('/figma-webhook', async (req, res) => {
-  console.log('Webhook received');
-  console.log(JSON.stringify(req.body, null, 2));
-
-  // Respond immediately to avoid Figma timeout
-  res.status(200).send('OK');
+  // Respond immediately so Figma doesn't timeout/retry
+  res.status(200).json({ message: 'Webhook received' });
 
   try {
+    console.log('--- Webhook received ---');
+    console.log('Raw body:', JSON.stringify(req.body, null, 2));
+
+    // Signature verification
+    const signature = req.headers['x-figma-signature'];
+    const secret = process.env.FIGMA_WEBHOOK_SECRET;
+
+    if (secret && signature) {
+      const hmac = crypto.createHmac('sha256', secret);
+      hmac.update(JSON.stringify(req.body));
+      const expected = hmac.digest('hex');
+      if (signature !== expected) {
+        console.error('Invalid signature');
+        return;
+      }
+    }
+
     const { comment, file_name, file_key, triggered_by } = req.body;
 
     const commenterName = triggered_by?.handle || 'Unknown';
-    const commentText = Array.isArray(comment)
-      ? comment[0]?.text || ''
-      : comment?.text || comment?.message || '';
-    const fileUrl = file_key
-      ? `https://www.figma.com/file/${file_key}`
-      : 'https://www.figma.com';
+    const fileUrl = `https://www.figma.com/file/${file_key}`;
 
-    console.log('--- New Figma Comment ---');
+    // FIX: comment is an array — extract text from first element
+    let commentText = '';
+    if (Array.isArray(comment) && comment.length > 0) {
+      commentText = comment[0]?.text || '';
+    } else if (typeof comment === 'object' && comment !== null) {
+      commentText = comment.text || '';
+    } else if (typeof comment === 'string') {
+      commentText = comment;
+    }
+
     console.log(`Commenter: ${commenterName}`);
-    console.log(`Comment: ${commentText}`);
+    console.log(`Comment text: "${commentText}"`);
     console.log(`File: ${file_name} (${fileUrl})`);
-    console.log('-------------------------');
+
+    if (!commentText) {
+      console.log('No comment text found');
+      return;
+    }
 
     const parsed = parseComment(commentText);
+    console.log('Parser result:', JSON.stringify(parsed));
 
     if (!parsed) {
       console.log('No valid issue pattern found in comment');
@@ -50,7 +74,6 @@ app.post('/figma-webhook', async (req, res) => {
       commenter: commenterName,
       fileUrl,
     });
-
     console.log('Slack message sent successfully');
   } catch (err) {
     console.error('Webhook processing error:', err);

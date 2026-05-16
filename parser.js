@@ -8,9 +8,9 @@ const STATUS_KEYWORDS = [
 ];
 
 function parseComment(text) {
-  if (!text) return null;
+  if (!text || typeof text !== 'string') return null;
 
-  // Match issue number like #95, optionally followed by a name/heading
+  // Match #number followed by anything
   const issueMatch = text.match(/#(\d+)\s*(.*)/);
   if (!issueMatch) return null;
 
@@ -21,13 +21,15 @@ function parseComment(text) {
   const lowerText = text.toLowerCase();
   const status = STATUS_KEYWORDS.find((kw) => lowerText.includes(kw)) || null;
 
-  // Remove the status keyword from the remaining text to get the issue name
+  // Remove the status keyword to get the issue name
   let issueName = remaining;
   if (status) {
     issueName = remaining.replace(new RegExp(status, 'i'), '').trim();
   }
-  // Clean up leftover punctuation like leading/trailing dashes, colons, etc.
-  issueName = issueName.replace(/^[\s\-:]+|[\s\-:]+$/g, '').trim() || null;
+  // Clean up leftover dashes, colons, whitespace at edges
+  issueName = issueName.replace(/^[\s\-:–—]+|[\s\-:–—]+$/g, '').trim() || null;
+
+  console.log(`Parsed: issueNumber=${issueNumber}, issueName=${issueName}, status=${status}`);
 
   return { issueNumber, issueName, status };
 }
