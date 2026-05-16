@@ -66,13 +66,14 @@ Slack Channel
 
 # Folder Structure
 
-```txt id="r3"
+```md
 figma-review-bot/
 ├── index.js
 ├── parser.js
 ├── slack.js
+├── register-webhook.js
 ├── package.json
-├── .env
+├── .env.example
 ├── README.md
 ```
 
@@ -101,10 +102,13 @@ npm install
 
 Create `.env`
 
-```env id="r6"
+```md
 SLACK_BOT_TOKEN=xoxb-your-token
 SLACK_CHANNEL_ID=CXXXXXXXX
 FIGMA_WEBHOOK_SECRET=mySuperSecret123
+FIGMA_TOKEN=figd_xxxxxxxxx
+FIGMA_FILE_ID=YOUR_FILE_ID
+RAILWAY_PUBLIC_URL=https://your-app.up.railway.app
 ```
 
 ---
@@ -253,20 +257,17 @@ Required scopes:
 
 # File-Level Webhook Registration
 
-Example:
+Run the automatic webhook setup script:
 
-```bash id="r18"
-curl -X POST "https://api.figma.com/v2/webhooks" \
--H "X-Figma-Token: YOUR_TOKEN" \
--H "Content-Type: application/json" \
--d '{
-  "event_type":"FILE_COMMENT",
-  "context":"file",
-  "context_id":"YOUR_FILE_ID",
-  "endpoint":"https://your-app.up.railway.app/figma-webhook",
-  "passcode":"mySuperSecret123"
-}'
+```bash
+node register-webhook.js
 ```
+
+This script:
+- reads values from `.env`
+- registers the Figma webhook automatically
+- connects your Railway endpoint to Figma
+- avoids manual curl setup issues
 
 ---
 
@@ -354,6 +355,20 @@ Check Railway logs carefully.
 
 ---
 
+# 5. Figma Retries Webhooks Repeatedly
+
+Cause:
+- server returns non-200 response
+- webhook processing crashes
+- Slack API failure blocks response
+
+Fix:
+- always return `res.sendStatus(200)` to Figma
+- wrap Slack calls in try/catch
+- log errors without crashing the server
+
+---
+
 # Debugging Tips
 
 Add logs inside:
@@ -411,7 +426,7 @@ MIT
 Created by Navajyoth Putalath
 
 - GitHub: https://github.com/navajyoth-puthalath13
-- X (Twitter): https://x.com/yourusername
-- LinkedIn: https://linkedin.com/in/yourusername
+- X (Twitter): https://x.com/putalath
+- LinkedIn: https://www.linkedin.com/in/navajyothp
 
 Built with ❤️
